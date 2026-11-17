@@ -1,0 +1,85 @@
+services:
+  # In Docker, Milvus must advertise an address other containers can resolve.
+  etcd:
+    command:
+      - etcd
+      - --advertise-client-urls=http://etcd:2379
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --data-dir=/etcd
+
+  minio:
+    image: devflow-minio:RELEASE.2025-10-15T17-29-55Z
+    build:
+      context: ./infra/minio
+      dockerfile: Dockerfile
+      network: host
+      args:
+        HTTP_PROXY: ${DEVFLOW_HTTP_PROXY:-}
+        HTTPS_PROXY: ${DEVFLOW_HTTP_PROXY:-}
+    command:
+      - server
+      - /minio_data
+      - --console-address
+      - ":9001"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql+psycopg://devflow:devflow@127.0.0.1:5432/devflow
+      MILVUS_URI: http://127.0.0.1:19530
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      REPO_CHECKOUT_DIR: /app/backend/.data/repos
+      UPLOAD_DIR: /app/backend/.data/uploads
+      # Default to the server's network; an SSH reverse proxy may disappear.
+      HTTP_PROXY: ${DEVFLOW_HTTP_PROXY:-}
+      HTTPS_PROXY: ${DEVFLOW_HTTP_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1,::1
+      no_proxy: localhost,127.0.0.1,::1
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 127.0.0.1
+      - --port
+      - "8000"
+    volumes:
+      - devflow_backend_data:/app/backend/.data
+      - devflow_model_cache:/root/.cache/huggingface
+    depends_on:
+      postgres:
+        condition: service_healthy
+      milvus:
+        condition: service_started
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  devflow_backend_data:
+  devflow_model_cache:
