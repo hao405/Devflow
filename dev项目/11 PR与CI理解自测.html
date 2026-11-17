@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>PR / CI 理解自测 · DevFlow-AI</title>
+  <style>
+    :root{--bg:#f5f4ee;--panel:#fffef9;--text:#25352f;--muted:#69776e;--line:#dce2d8;--accent:#275b48;--soft:#eaf0e7;--orange:#a45127;--bad:#a43b3b;--bad-soft:#faeeeb;--good-soft:#e7f1e7;--shadow:0 8px 32px #25352f06}
+    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}button,input,textarea{font:inherit}button,a,input,textarea{ -webkit-tap-highlight-color:transparent }button{cursor:pointer}button:disabled{cursor:default;opacity:.55}a{color:var(--accent);text-underline-offset:4px}button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--orange);outline-offset:4px}[hidden]{display:none!important}
+    .page{max-width:1180px;margin:0 auto;padding:38px 28px 90px}.topline{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:20px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}.brand{color:var(--accent);font-weight:700;letter-spacing:2px}.topline a{color:var(--muted)}.hero{padding:42px 0 32px}.eyebrow{font-size:12px;letter-spacing:3px;color:var(--orange);font-weight:600}h1{font-size:clamp(30px,5vw,48px);line-height:1.22;letter-spacing:-1.5px;margin:11px 0 15px;font-weight:650}.lead{max-width:750px;margin:0;color:var(--muted);line-height:1.9}.facts{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.pill{font-size:12px;background:var(--soft);padding:5px 11px;border-radius:5px}.layout{display:grid;grid-template-columns:224px minmax(0,1fr);gap:32px;align-items:start}.rail{position:sticky;top:24px}.railbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow)}h2,h3,p{margin-top:0}.railtop{display:flex;justify-content:space-between;gap:8px;font-size:13px}.count{font-variant-numeric:tabular-nums;color:var(--accent);font-weight:650}.track{height:5px;background:var(--soft);border-radius:9px;margin:12px 0 20px;overflow:hidden}.fill{height:100%;width:0;background:var(--accent);transition:width .2s}.nav{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.nav button{border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--muted);height:32px;font-size:12px}.nav button.answered{background:var(--soft);color:var(--accent);border-color:var(--accent)}.nav button.wrong{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}.nav button.correct{background:var(--good-soft);border-color:var(--accent);color:var(--accent)}.railnote{font-size:12px;color:var(--muted);line-height:1.85;margin:18px 0 0}.railactions{display:grid;gap:8px;margin-top:18px}.button{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:10px 17px;border-radius:8px;line-height:1.5;font-size:14px;font-weight:500}.primary{background:var(--accent);color:#fff;border-color:var(--accent)}.button:hover:not(:disabled){filter:brightness(.96)}.quiet{background:transparent;font-size:12px;color:var(--muted)}.sectionhead{display:flex;align-items:center;gap:13px;margin:5px 0 16px}.sectionhead:not(:first-child){margin-top:32px}.sectionnumber{font-size:12px;color:var(--orange);font-weight:700;letter-spacing:1px}.sectionhead h2{font-size:18px;margin:0;font-weight:600}.sectionhead span:last-child{font-size:12px;color:var(--muted);margin-left:auto}.question{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:25px 28px;margin-bottom:16px;box-shadow:var(--shadow);scroll-margin-top:24px}.question.missing{border-color:var(--orange)}.qmeta{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font-size:12px;margin-bottom:10px}.qnumber{font-weight:700;letter-spacing:1px;color:var(--accent)}.qtitle{font-size:18px;font-weight:600;line-height:1.75;margin:0 0 16px}.context{font-size:14px;color:var(--muted);margin:-4px 0 17px}.options{border:0;padding:0;margin:0;min-width:0}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.option{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);padding:11px 13px;border-radius:8px;margin-bottom:9px;cursor:pointer;font-size:14px;line-height:1.75}.option:last-child{margin-bottom:0}.option input{margin:6px 0 0;accent-color:var(--accent);flex-shrink:0}.option:has(input:checked){background:var(--soft);border-color:var(--accent)}.option .letter{color:var(--muted);margin-right:5px}.option.is-answer{background:var(--good-soft);border-color:var(--accent)}.option.is-wrong{background:var(--bad-soft);border-color:var(--bad)}.option.locked{cursor:default}.verdict{display:inline-block;font-size:11px;line-height:1.5;margin-left:7px;color:var(--accent)}.option.is-wrong .verdict{color:var(--bad)}textarea{display:block;width:100%;min-height:145px;padding:14px 16px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;resize:vertical;font-size:14px;line-height:1.8}textarea:disabled{opacity:1;-webkit-text-fill-color:var(--text)}.textcount{margin-top:5px;text-align:right;font-size:11px;color:var(--muted)}.log{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--soft);padding:15px 18px;border-radius:8px;font:12px/1.9 ui-monospace,SFMono-Regular,Consolas,monospace;margin:0 0 18px}.feedback{margin-top:20px;padding-top:18px;border-top:1px solid var(--line);font-size:14px;line-height:1.85}.feedbackhead{font-weight:650;color:var(--accent);margin:0 0 8px}.feedbackhead.incorrect{color:var(--bad)}.feedback p:last-child{margin-bottom:0}.reference{font-size:12px;color:var(--muted);margin:12px 0 0}.reference code{overflow-wrap:anywhere}code{font: .9em/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}.rubric{margin-top:16px;border-radius:9px;background:var(--soft);padding:16px}.rubric-title{font-size:13px;font-weight:600;margin:0 0 10px}.rubric label{display:flex;gap:9px;align-items:flex-start;font-size:13px;cursor:pointer;margin-bottom:10px}.rubric input{accent-color:var(--accent);margin-top:6px}.reviewed{padding-top:11px;border-top:1px solid var(--line);margin-top:14px!important;margin-bottom:0!important;font-weight:600}.bottom{padding:12px 0 0}.submitrow{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.submitrow .button{padding:13px 24px}.submitnote{font-size:12px;color:var(--muted)}.error{color:var(--orange);font-size:14px;margin:13px 0 0}.result{background:var(--panel);border:1px solid var(--accent);border-radius:14px;padding:25px 28px;margin-bottom:24px;scroll-margin-top:24px}.resultline{display:flex;align-items:center;justify-content:space-between;gap:16px}.score{font-size:42px;line-height:1.2;font-weight:650;letter-spacing:-1px;font-variant-numeric:tabular-nums}.score small{font-size:17px;font-weight:400;color:var(--muted);letter-spacing:0}.result h2{margin:0;font-size:18px}.resultdetail{font-size:14px;margin:13px 0 0;color:var(--muted)}.reviewtopics{font-size:14px;margin:14px 0 0}.resultactions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.result-hint{font-size:12px;color:var(--muted);margin:14px 0 0}footer{border-top:1px solid var(--line);margin-top:36px;padding-top:18px;font-size:12px;color:var(--muted)}.status{min-height:20px;font-size:11px;color:var(--muted);margin-top:10px}noscript{display:block;background:var(--bad-soft);padding:20px}
+    @media(max-width:800px){.page{padding:22px 17px 60px}.hero{padding-top:28px}.layout{grid-template-columns:1fr;gap:22px}.rail{position:static}.railbox{padding:16px}.nav{grid-template-columns:repeat(10,1fr)}.railactions{grid-template-columns:1fr 1fr}.railnote{margin-top:12px}.question{padding:21px 19px}.sectionhead span:last-child{display:none}.qtitle{font-size:17px}.result{padding:22px 20px}.resultline{align-items:flex-start}.topline{font-size:11px}.topline a{max-width:125px;text-align:right}.hero h1{letter-spacing:-.7px}}
+    @media(max-width:410px){.nav{grid-template-columns:repeat(5,1fr)}.resultline{flex-direction:column;gap:12px}.qmeta{font-size:11px}.option{padding:10px}.pill{font-size:11px}}
+    @media(prefers-color-scheme:dark){:root{--bg:#17211d;--panel:#202d26;--text:#e3eae1;--muted:#a9b8aa;--line:#3e5044;--accent:#9ac8ac;--soft:#2c3e31;--orange:#e8ac83;--bad:#efaaaa;--bad-soft:#442d2c;--good-soft:#2b4233;--shadow:none}.primary{color:#17211d}}
+    @media print{body{background:#fff;color:#111}.page{padding:0;max-width:none}.rail,.topline,.submitrow,.resultactions,.rubric,.status,.error,footer{display:none!important}.hero{padding:0 0 20px}.layout{display:block}.question{break-inside:avoid;box-shadow:none;border-color:#ccc}.feedback,.log{break-inside:avoid}.hero h1{font-size:28px}textarea{min-height:80px}}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topline"><div class="brand">DEVFLOW-AI / STUDY NOTES</div><a href="10%20PR与CI扫盲：从基本概念到DevFlow源码.md">回到 PR / CI 扫盲文档 ↗</a></header>
+    <section class="hero" aria-labelledby="title">
+      <div class="eyebrow">READ → RECALL → EXPLAIN</div>
+      <h1 id="title">PR / CI，你理解了吗？</h1>
+      <p class="lead">先不翻文档，用 10 道题检验概念、源码流程和场景判断。提交后查看解析，再用自己的话补齐理解。简答题由你对照要点自评。</p>
+      <div class="facts"><span class="pill">8 道客观题 · 80 分</span><span class="pill">2 道简答题 · 20 分</span><span class="pill">建议 10–15 分钟</span><span class="pill">离线可用</span></div>
+    </section>
+    <noscript>本页需要启用 JavaScript 才能显示题目并评分。</noscript>
+    <div class="layout">
+      <aside class="rail" aria-label="答题进度">
+        <div class="railbox">
+          <div class="railtop"><span>作答进度</span><strong class="count" id="progress-text">0 / 10</strong></div>
+          <div class="track" role="progressbar" aria-label="已作答题数" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0" id="progressbar"><div class="fill" id="progress-fill"></div></div>
+          <nav class="nav" id="question-nav" aria-label="跳转到题目"></nav>
+          <p class="railnote">每题 10 分。多选题需全部选对，不多选、不漏选。简答先写出判断和理由，提交后再看参考要点。</p>
+          <div class="railactions"><button class="button primary" type="button" id="rail-submit">提交并查看解析</button><button class="button quiet" type="button" id="reset">清空并重新作答</button></div>
+          <div class="status" id="save-status" aria-live="polite">答案保存在当前浏览器，不会上传。</div>
+        </div>
+      </aside>
+      <main>
+        <section class="result" id="result" aria-labelledby="result-title" tabindex="-1" hidden>
+          <div class="resultline"><div><div class="eyebrow">YOUR REVIEW</div><h2 id="result-title">本次作答结果</h2></div><div class="score" id="score">— <small>/ 100</small></div></div>
+          <p class="resultdetail" id="result-detail"></p><p class="reviewtopics" id="review-topics"></p>
+          <div class="resultactions"><button class="button" type="button" id="edit">修改答案再提交</button><button class="button" type="button" id="download">下载答题记录</button></div>
+          <p class="result-hint">下方保留你的原始回答与逐题解析。可下载记录后发回来，继续讨论你的判断依据。</p>
+        </section>
+        <form id="quiz" novalidate>
+          <div id="questions"></div>
+          <div class="bottom"><div class="submitrow"><button class="button primary" id="submit" type="submit">提交并查看解析</button><span class="submitnote">全部作答后提交 · 不计时 · 提交前不显示答案</span></div><p class="error" id="form-error" role="alert" hidden></p></div>
+        </form>
+        <footer>依据《PR 与 CI 扫盲：从基本概念到 DevFlow-AI 源码》及 2026-11-02 工作区实现编写。场景日志为教学示例。本页没有调用 GitHub 或模型服务；简答题不做关键词自动打分。</footer>
+      </main>
+    </div>
+  </div>
+  <script>
+  (() => {
+    'use strict';
+    const KEY = 'devflow-pr-ci-quiz-v1';
+    const questions = [
+      { id:1, group:0, type:'single', topic:'Push、PR 与 Merge', title:'你在修复分支提交代码并执行了 git push。此时可以确定什么？', options:[
+        '修复已经合进 main，团队其他成员会自动使用新版本。',
+        '本地提交已推送到远程；是否已创建 PR、是否已合并，还需要分别确认。',
+        'GitHub 一定已经为这次提交创建了 PR。',
+        'CI 一定已通过，所以不需要代码审查。'
+      ], answer:[1], explanation:'Push 上传提交，PR 提出合并申请，Merge 执行合并。三者是不同动作。是否触发 CI 还取决于仓库 Workflow 配置。', reference:'扫盲文档 §2.1、§3.3'},
+      { id:2, group:0, type:'single', topic:'Head / Base 与 diff', title:'某 PR 显示 head = fix/permission-check，base = main。应该怎样理解？', options:[
+        '申请把 main 的修改合入 fix/permission-check。',
+        'head 表示最近失败的 CI，base 表示最近成功的 CI。',
+        '两个分支已经合并，PR 只是保留操作记录。',
+        '申请把 fix/permission-check 的改动合入 main，可通过 Files changed 查看差异。'
+      ], answer:[3], explanation:'Head 是改动来源分支，base 是目标分支。Files changed 中的 diff 用来阅读具体变化；PR 打开本身不表示合并已经发生。', reference:'扫盲文档 §2.1—§2.3'},
+      { id:3, group:0, type:'single', topic:'Workflow / Run / Job / Step', title:'同一份 Backend CI 配置今天执行了两次，每次都有一个测试 Job，其中包含“安装依赖”和“运行测试”。哪个描述正确？', options:[
+        '1 份 Workflow 定义、2 次 Workflow Run；每次 Run 中，测试 Job 包含多个 Step，并在 Runner 执行环境中运行。',
+        '2 份 Workflow；安装依赖和运行测试分别是两个 Runner。',
+        'Workflow Run 就是日志中的一行命令。',
+        'Job 与 Step 是同一层级，只是 GitHub 的不同叫法。'
+      ], answer:[0], explanation:'Workflow 是流程定义，Run 是一次执行，Job 是其中一组任务，Step 是任务内的步骤，Runner 是执行环境。同一份定义可以产生很多次运行记录。', reference:'扫盲文档 §3.2'},
+      { id:4, group:0, type:'single', topic:'执行阶段与执行结果', title:'你看到某次 Run 的 status = completed，conclusion = failure。此时应该怎样判断？', options:[
+        'completed 表示成功，可忽略 failure。',
+        '两个字段矛盾，说明这次同步记录一定坏了。',
+        '本次运行已结束且结果失败，应继续查看失败 Job、Step 和日志。',
+        '运行还在排队，等待 conclusion 变成 completed。'
+      ], answer:[2], explanation:'Status 回答“执行到哪个阶段”，conclusion 回答“结果如何”。Completed 只代表结束，不等于 success。', reference:'扫盲文档 §3.4'},
+      { id:5, group:1, type:'multi', topic:'CI 通过能证明什么', title:'PR 上的 CI 全绿。下面哪些理解成立？', context:'多选题，选择全部正确项。', options:[
+        '已经证明所有业务需求、边界条件和生产环境都没有问题。',
+        '说明本次实际运行、配置范围内的检查通过；还应确认它们对应哪个提交版本。',
+        '能否合并还要看审查、冲突及仓库实际规则；CI 成功也不等于已经部署上线。',
+        '只要 DevFlow 建议合入，GitHub 就会自动替你合并。'
+      ], answer:[1,2], explanation:'自动检查的结论受检查范围、执行版本和环境限制。合并资格由仓库实际规则等因素决定，部署则是另一阶段。DevFlow 的报告提供建议。', reference:'扫盲文档 §3.4—§4'},
+      { id:6, group:1, type:'single', topic:'DevFlow 分析的数据链路', title:'在当前独立 PR 页面点击“生成 PR 分析”，哪条流程最符合实现？', options:[
+        '浏览器直接把 GitHub 整个仓库发给模型，后端不参与。',
+        '页面直接调用 GitHub 的 Merge API，成功后再生成报告。',
+        'Agent 自行登录 GitHub，持续循环，直到完成修复并推送提交。',
+        '页面请求本项目分析接口；后端读取已同步 PR 数据，尝试代码快照、组装上下文，调用 PRReviewAgent，并保存返回结果。'
+      ], answer:[3], explanation:'先同步再分析是主要数据链路。分析通常使用本地数据库的 PR 材料，并补充代码、文档等上下文；重新分析不等于重新同步全部 GitHub 数据。', reference:'pull_requests.py：analyze_pull_request()、_build_pr_analysis_context()；扫盲文档 §5—§6'},
+      { id:7, group:1, type:'multi', topic:'证据关联与实现边界', title:'当前 PR 报告提示“仓库近期有失败 CI”，同时读到了 3 条 Review 评论。哪些判断符合源码？', context:'多选题，注意“拿到数据”和“证明结论”的区别。', options:[
+        '失败 CI 来自同仓库近期 Run 汇总，仍要核对当前 PR 的分支、提交和对应运行。',
+        '有 3 条评论就证明有 3 个尚未解决的阻塞问题。',
+        'CI 分析关联出的最近 PR 一定是本次失败的根因。',
+        '当前同步的评论字段不足以证明讨论解决状态，应回到 GitHub 核实。'
+      ], answer:[0,3], explanation:'PR 分析汇总同仓库最近 8 次 Run，没有按 PR head SHA 精确过滤；Review 评论也没有同步完整的讨论解决状态。CI 侧还有候选 PR 的启发式匹配，均不能直接作因果结论。', reference:'pull_requests.py：_build_pr_analysis_context()；ci.py：_related_pr_for_run()；扫盲文档 §6.4、§7.4'},
+      { id:8, group:1, type:'single', topic:'模型、规则兜底与结构校验', title:'页面返回了一份字段完整的 PR JSON 报告。你能据此得出什么结论？', options:[
+        '模型肯定调用成功，并且已逐块、多轮地审查所有代码。',
+        '报告可能来自模型与规则合并，也可能来自规则兜底；字段完整不等于结论正确，需要继续核对证据。',
+        'Pydantic 校验已经证明 PR 没有业务漏洞。',
+        'confidence = 0.8 就代表结论正确概率被严格验证为 80%。'
+      ], answer:[1], explanation:'Agent 先构造规则兜底，再请求模型并校验结构。模型没有可用输出等情况下仍可返回报告。结构校验检查字段约束，不能验证事实正确性；confidence 也不是校准过的概率。当前 diff 块放在一次模型请求中。', reference:'pr_review_agent.py：run()；LLMClient.chat_json()；扫盲文档 §6.2—§6.3'},
+      { id:9, group:2, type:'short', topic:'根据日志制定排查路线', title:'这次 CI 失败，你会先看什么、再怎么查？请写出你的判断与下一步。', context:'请用 2–4 句话回答。这是教学示例，文件名不对应当前项目。', log:'Job: backend-tests\nStep: Run pytest\nE   AssertionError: expected 403, got 200\nFAILED example_test_permission.py::test_normal_user_cannot_access\nProcess completed with exit code 1.',
+        model:'这是运行测试时出现的行为不一致：预期拒绝访问（403），实际成功（200）。退出码 1 只是失败信号。先阅读失败用例及测试用户、权限前提，核对预期是否正确，再检查对应权限代码和近期改动，用相同测试命令复现。当前日志不足以证明某个具体函数就是根因。',
+        rubric:[ '我明确说出了 403 与 200 的行为差异，并区分了错误证据与笼统退出码。（5 分）', '我给出了可执行的核验路线：检查测试预期/用户前提与相关代码，并通过相同测试复现；没有直接断言根因。（5 分）' ], reference:'CIDebugAgent、错误提取函数；扫盲文档 §7.3—§7.4'},
+      { id:10, group:2, type:'short', topic:'综合判断：现在能合并吗', title:'DevFlow 对 PR #42 给出“建议合入”，但你只看到仓库里一次失败 Run 和若干 Review 评论。你会怎么向同事说明“现在能否合并”？', context:'请写出需要补查的证据，以及你怎样理解这份建议。不要只回答“能”或“不能”。',
+        model:'现有材料不足以确定当前 PR 的合并资格。先确认 PR 最新提交，核对失败 Run 是否对应它、后续是否已成功，以及必要检查是否完整。再到 GitHub 确认审查批准、讨论解决状态、冲突及仓库合并规则。DevFlow 的“建议合入”是辅助判断，不会自动设置门禁或替我执行合并；核验后再给出结论。',
+        rubric:[ '我要求核对当前 PR 的最新分支/提交、对应 Run、必要检查与后续结果，没有把仓库失败直接归因于 PR。（5 分）', '我还核对审查/讨论、冲突和实际合并规则，并明确区分分析建议与 GitHub 合并资格、执行合并。（5 分）' ], reference:'扫盲文档 §4、§6.4、§9；PR 分析接口与 action_drafts.py 执行分支'}
+    ];
+    const groups=[['01','协作概念','第 1–4 题'],['02','项目实现与证据','第 5–8 题'],['03','用自己的话解释','第 9–10 题']];
+    const $=id=>document.getElementById(id);
+    const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    let state={version:1,answers:{},rubrics:{},reviewed:{},submitted:false};
+    let storageOK=true;
+    try {
+      const saved=JSON.parse(localStorage.getItem(KEY)||'null');
+      if(saved?.version===1){
+        for(const q of questions){const a=saved.answers?.[q.id];if(q.type==='short'&&typeof a==='string')state.answers[q.id]=a.slice(0,4000);if(q.type!=='short'&&Array.isArray(a))state.answers[q.id]=[...new Set(a.filter(i=>Number.isInteger(i)&&i>=0&&i<q.options.length))].slice(0,q.type==='single'?1:q.options.length);if(q.type==='short'){state.rubrics[q.id]=[0,1].filter(i=>saved.rubrics?.[q.id]?.includes(i));state.reviewed[q.id]=saved.reviewed?.[q.id]===true;}}
+        state.submitted=saved.submitted===true&&questions.every(answered);
+      }
+    }catch{storageOK=false;}
+    function answered(q){const a=state.answers[q.id];return q.type==='short'?typeof a==='string'&&!!a.trim():Array.isArray(a)&&a.length>0;}
+    function isCorrect(q){const a=state.answers[q.id]||[];return a.length===q.answer.length&&q.answer.every(i=>a.includes(i));}
+    function save(){try{localStorage.setItem(KEY,JSON.stringify(state));$('save-status').textContent='答案已保存在当前浏览器，不会上传。';}catch{storageOK=false;$('save-status').textContent='当前浏览器不能保存进度；保持本页打开即可继续作答。';}}
+    function render(){
+      let html='';
+      for(let g=0;g<groups.length;g++){
+        html+=`<div class="sectionhead"><span class="sectionnumber">${groups[g][0]}</span><h2>${groups[g][1]}</h2><span>${groups[g][2]}</span></div>`;
+        for(const q of questions.filter(x=>x.group===g)){
+          const kind=q.type==='single'?'单选':q.type==='multi'?'多选':'简答 · 对照要点自评';
+          html+=`<section class="question" id="q-${q.id}" tabindex="-1" aria-labelledby="title-${q.id}"><div class="qmeta"><span class="qnumber">QUESTION ${String(q.id).padStart(2,'0')}</span><span>${kind} · 10 分</span></div><h3 class="qtitle" id="title-${q.id}">${esc(q.title)}</h3>${q.context?`<p class="context">${esc(q.context)}</p>`:''}${q.log?`<pre class="log">${esc(q.log)}</pre>`:''}`;
+          if(q.type==='short'){
+            html+=`<label class="sr-only" for="answer-${q.id}">第 ${q.id} 题回答</label><textarea id="answer-${q.id}" data-question="${q.id}" maxlength="4000" placeholder="写下你的判断、证据和下一步…" ${state.submitted?'disabled':''}>${esc(state.answers[q.id]||'')}</textarea><div class="textcount" id="chars-${q.id}">${(state.answers[q.id]||'').length} / 4000</div>`;
+          }else{
+            html+=`<fieldset class="options"><legend class="sr-only">第 ${q.id} 题：${esc(q.title)}</legend>`;
+            for(let i=0;i<q.options.length;i++){
+              const checked=(state.answers[q.id]||[]).includes(i),correct=state.submitted&&q.answer.includes(i),wrong=state.submitted&&checked&&!q.answer.includes(i);
+              html+=`<label class="option${correct?' is-answer':''}${wrong?' is-wrong':''}${state.submitted?' locked':''}"><input type="${q.type==='single'?'radio':'checkbox'}" name="q${q.id}" value="${i}" data-question="${q.id}" ${checked?'checked':''} ${state.submitted?'disabled':''}><span><span class="letter">${String.fromCharCode(65+i)}.</span>${esc(q.options[i])}${correct?'<span class="verdict">正确项</span>':wrong?'<span class="verdict">误选</span>':''}</span></label>`;
+            }
+            html+='</fieldset>';
+          }
+          if(state.submitted){
+            html+='<div class="feedback">';
+            if(q.type==='short'){
+              html+=`<p class="feedbackhead">参考回答 · 请对照你原先写出的内容</p><p>${esc(q.model)}</p><div class="rubric"><p class="rubric-title">每包含一个要点得 5 分；只是看懂参考答案，不计为原回答得分。</p>`;
+              q.rubric.forEach((r,i)=>{html+=`<label><input type="checkbox" data-rubric="${q.id}" value="${i}" ${(state.rubrics[q.id]||[]).includes(i)?'checked':''}><span>${esc(r)}</span></label>`;});
+              html+=`<label class="reviewed"><input type="checkbox" data-reviewed="${q.id}" ${state.reviewed[q.id]?'checked':''}><span>我已完成本题自评（没有要点也可确认 0 分）</span></label></div>`;
+            }else html+=`<p class="feedbackhead ${isCorrect(q)?'':'incorrect'}">${isCorrect(q)?'回答正确 · 10 / 10':'需要复习 · 0 / 10'}　正确答案：${q.answer.map(i=>String.fromCharCode(65+i)).join('、')}</p><p>${esc(q.explanation)}</p>`;
+            html+=`<p class="reference">复习位置：${esc(q.reference)}</p></div>`;
+          }
+          html+='</section>';
+        }
+      }
+      $('questions').innerHTML=html;
+      $('question-nav').innerHTML=questions.map(q=>`<button type="button" data-jump="${q.id}" aria-label="跳转到第 ${q.id} 题">${String(q.id).padStart(2,'0')}</button>`).join('');
+      $('submit').hidden=state.submitted;
+      $('rail-submit').textContent=state.submitted?'查看本次结果':'提交并查看解析';
+      $('result').hidden=!state.submitted;
+      updateProgress();if(state.submitted)updateResults();
+      if(!storageOK)$('save-status').textContent='当前浏览器不能保存进度；保持本页打开即可继续作答。';
+    }
+    function updateProgress(){
+      const count=questions.filter(answered).length;
+      $('progress-text').textContent=`${count} / 10`;
+      $('progress-fill').style.width=`${count*10}%`;
+      $('progressbar').setAttribute('aria-valuenow',String(count));
+      for(const q of questions){
+        const btn=document.querySelector(`[data-jump="${q.id}"]`);
+        btn.className=state.submitted&&q.type!=='short'?(isCorrect(q)?'correct':'wrong'):(answered(q)?'answered':'');
+        btn.setAttribute('aria-label',`第 ${q.id} 题，${state.submitted&&q.type!=='short'?(isCorrect(q)?'正确':'错误'):answered(q)?'已作答':'未作答'}`);
+      }
+    }
+    function scores(){
+      const objective=questions.filter(q=>q.type!=='short'),short=questions.filter(q=>q.type==='short');
+      const auto=objective.filter(isCorrect).length*10;
+      const reviewed=short.filter(q=>state.reviewed[q.id]).length;
+      const manual=short.reduce((sum,q)=>sum+(state.reviewed[q.id]?(state.rubrics[q.id]||[]).length*5:0),0);
+      return{auto,manual,reviewed,total:auto+manual,wrong:objective.filter(q=>!isCorrect(q))};
+    }
+    function updateResults(){
+      const s=scores();
+      $('score').innerHTML=s.reviewed===2?`${s.total} <small>/ 100</small>`:'待自评 <small>/ 100</small>';
+      $('result-detail').textContent=`客观题 ${s.auto} / 80 分（${s.auto/10} / 8 题正确） · 简答题${s.reviewed===2?` ${s.manual} / 20 分`:`已自评 ${s.reviewed} / 2 题，待完成后合计总分`}。`;
+      const gaps=s.wrong.map(q=>`第 ${q.id} 题「${q.topic}」`);
+      for(const q of questions.filter(x=>x.type==='short'&&state.reviewed[x.id]&&(state.rubrics[x.id]||[]).length<2))gaps.push(`第 ${q.id} 题「${q.topic}」`);
+      $('review-topics').textContent=gaps.length?'建议优先复习：'+gaps.join('、')+'。':s.reviewed===2?'本次题目均已答对或完成要点自评。可再脱离选项，口述一次 PR 分析与 CI 排障流程。':'客观题已全部答对。请继续对照下方第 9、10 题要点，完成简答自评。';
+    }
+    function jump(id){$(id).scrollIntoView({behavior:'smooth',block:'start'});$(id).focus({preventScroll:true});}
+    function submit(){
+      if(state.submitted){jump('result');return;}
+      const missing=questions.filter(q=>!answered(q));
+      document.querySelectorAll('.question.missing').forEach(x=>x.classList.remove('missing'));
+      if(missing.length){$('form-error').hidden=false;$('form-error').textContent=`还有 ${missing.length} 题未作答：${missing.map(q=>q.id).join('、')}。请先完成这些题目，再提交查看解析。`;missing.forEach(q=>$(`q-${q.id}`).classList.add('missing'));jump(`q-${missing[0].id}`);return;}
+      state.submitted=true;state.rubrics={};state.reviewed={};$('form-error').hidden=true;save();render();jump('result');
+    }
+    $('quiz').addEventListener('submit',event=>{event.preventDefault();submit();});
+    $('rail-submit').addEventListener('click',submit);
+    $('question-nav').addEventListener('click',event=>{const btn=event.target.closest('[data-jump]');if(btn)jump(`q-${btn.dataset.jump}`);});
+    $('questions').addEventListener('change',event=>{
+      const el=event.target;
+      if(el.matches('input[data-question]')&&!state.submitted){const id=Number(el.dataset.question),q=questions.find(x=>x.id===id);state.answers[id]=q.type==='single'?[Number(el.value)]:[...document.querySelectorAll(`input[name="q${id}"]:checked`)].map(x=>Number(x.value));$(`q-${id}`).classList.remove('missing');updateProgress();save();}
+      if(el.matches('[data-rubric]')&&state.submitted){const id=Number(el.dataset.rubric);state.rubrics[id]=[...document.querySelectorAll(`[data-rubric="${id}"]:checked`)].map(x=>Number(x.value));updateResults();save();}
+      if(el.matches('[data-reviewed]')&&state.submitted){state.reviewed[Number(el.dataset.reviewed)]=el.checked;updateResults();save();}
+    });
+    $('questions').addEventListener('input',event=>{const el=event.target;if(el.matches('textarea[data-question]')&&!state.submitted){const id=Number(el.dataset.question);state.answers[id]=el.value;$(`chars-${id}`).textContent=`${el.value.length} / 4000`;$(`q-${id}`).classList.remove('missing');updateProgress();save();}});
+    $('edit').addEventListener('click',()=>{state.submitted=false;state.rubrics={};state.reviewed={};save();render();jump('q-1');});
+    $('reset').addEventListener('click',()=>{state={version:1,answers:{},rubrics:{},reviewed:{},submitted:false};$('form-error').hidden=true;save();render();jump('q-1');});
+    $('download').addEventListener('click',()=>{
+      const s=scores(),lines=['# PR / CI 理解自测 · 答题记录','',`客观题：${s.auto} / 80；简答题：${s.reviewed===2?s.manual+' / 20':'待完成自评（'+s.reviewed+'/2）'}；总分：${s.reviewed===2?s.total+' / 100':'待自评'}`,'','说明：客观题自动评分；简答题由作答者对照要点自评。',''];
+      for(const q of questions){lines.push(`## 第 ${q.id} 题：${q.title}`,'');if(q.log)lines.push('```text',q.log,'```','');if(q.type==='short'){lines.push('我的原回答：',state.answers[q.id]||'（未作答）','','参考要点：',q.model,'',`自评分：${state.reviewed[q.id]?(state.rubrics[q.id]||[]).length*5+' / 10':'待自评'}`);q.rubric.forEach((r,i)=>lines.push(`- [${(state.rubrics[q.id]||[]).includes(i)?'x':' '}] ${r}`));}else{q.options.forEach((o,i)=>lines.push(`${String.fromCharCode(65+i)}. ${o}`));lines.push('',`我的选择：${(state.answers[q.id]||[]).map(i=>String.fromCharCode(65+i)).join('、')}`,`正确答案：${q.answer.map(i=>String.fromCharCode(65+i)).join('、')}`,`本题得分：${isCorrect(q)?10:0} / 10`,'',q.explanation);}lines.push('',`复习位置：${q.reference}`,'');}
+      const url=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/markdown;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='PR与CI理解自测-答题记录.md';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    });
+    render();
+  })();
+  </script>
+</body>
+</html>

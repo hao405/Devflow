@@ -6,6 +6,8 @@ on:
     paths:
       - VERSION
       - .github/workflows/release.yml
+      - RELEASE_NOTES.md
+      - 'dev项目/**'
   workflow_dispatch:
 
 permissions:
@@ -22,6 +24,7 @@ jobs:
       - name: Check out the release commit
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
       - name: Package and publish the source
         shell: bash
@@ -35,7 +38,28 @@ jobs:
           tag="v$version"
           archive="DevFlow-AI-$tag.zip"
           if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag already exists; keeping its assets unchanged."
+            if [[ ! -d 'dev项目' ]]; then
+              echo "Release $tag already exists; no project notes to attach."
+              exit 0
+            fi
+            code_changes="$(git diff --name-only "$tag" "$GITHUB_SHA" -- . \
+              ':!dev项目' ':!README.md' ':!RELEASE_NOTES.md' \
+              ':!MANIFEST.sha256' ':!.gitignore' ':!.github/workflows/release.yml')"
+            if [[ -n "$code_changes" ]]; then
+              echo "Existing release supplements must contain documentation changes only."
+              echo "$code_changes"
+              exit 1
+            fi
+            supplement="DevFlow-AI-$tag-with-docs.zip"
+            git archive --format=zip --prefix="DevFlow-AI-$tag/" --output="../$supplement" "$GITHUB_SHA"
+            (cd .. && sha256sum "$supplement" > "$supplement.sha256")
+            gh release upload "$tag" "../$supplement" "../$supplement.sha256" --clobber
+            notes_file="$(mktemp)"
+            cp RELEASE_NOTES.md "$notes_file"
+            printf '\n文档补充构建：[%s](https://github.com/%s/commit/%s)。\n' \
+              "$GITHUB_SHA" "$GH_REPO" "$GITHUB_SHA" >> "$notes_file"
+            gh release edit "$tag" --notes-file "$notes_file"
+            rm -f "$notes_file"
             exit 0
           fi
           git archive --format=zip --prefix="DevFlow-AI-$tag/" --output="../$archive" "$GITHUB_SHA"

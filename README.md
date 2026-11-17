@@ -141,3 +141,7 @@ Content-Type: application/json
 - 对 Judge 超时或缺失指标点击“仅重试异常评分”，复用已经保存的回答和证据，不重新运行 ChatAgent；
 - 选择两个相同评测集 Hash、Ragas/Judge 配置和 Top-K 的结果做回归对比；
 - 生成 `create_issue` 类型的 ActionDraft，把失败 Case、证据和建议带入人工确认流程，不会直接写入 GitHub。
+
+## 项目学习总结
+
+项目源码理解、面试口述和 PR/CI 自测见 [项目总结文档](dev%E9%A1%B9%E7%9B%AE/README.md)。本次重点更新会话记忆、上下文压缩与 KV Cache、多 Agent 协作的实现边界。
