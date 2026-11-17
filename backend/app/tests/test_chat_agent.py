@@ -243,6 +243,98 @@ def test_runtime_tool_projection_compacts_old_observations_without_mutating_audi
     assert len(prompt_observations) >= 1
 
 
+def test_tool_prompt_keeps_prior_projection_and_user_prefix_on_append(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.agents.chat_agent.default_context_budget",
+        lambda: SimpleNamespace(tool_observation_tokens=3000),
+    )
+    agent = ChatAgent(model=None)
+    original = "stable evidence " * 5000
+    state = {
+        "message": "CURRENT-QUESTION",
+        "context": {},
+        "tools": {},
+        "agent_events": [],
+        "observations": [{"tool_name": "workspace.read_file", "observation": {"answer_preview": original}}],
+    }
+    first_prompt = agent._tool_calling_user_prompt(state)  # type: ignore[arg-type]
+    first_items, _, _ = agent._runtime_tool_context(state)  # type: ignore[arg-type]
+    for index in range(2):
+        state["observations"].append({"tool_name": "workspace.search_code", "observation": {"answer_preview": f"new result {index}"}})
+    next_prompt = agent._tool_calling_user_prompt(state)  # type: ignore[arg-type]
+    next_items, _, stats = agent._runtime_tool_context(state)  # type: ignore[arg-type]
+
+    assert next_items[:1] == first_items
+    assert stats["omitted_observations"] == 0
+    first_prefix = first_prompt.split("已有观察结果", 1)[0]
+    assert "用户消息：CURRENT-QUESTION" in first_prefix
+    assert next_prompt.startswith(first_prefix)
+    assert state["observations"][0]["observation"]["answer_preview"] == original
+
+
+def test_runtime_eviction_leaves_headroom_and_does_not_restore_old_items(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.agents.chat_agent.default_context_budget",
+        lambda: SimpleNamespace(tool_observation_tokens=2000),
+    )
+    agent = ChatAgent(model=None)
+    state = {
+        "observations": [
+            {"tool_name": f"tool-{index}", "observation": {"answer_preview": "evidence " * 500}}
+            for index in range(6)
+        ],
+        "agent_events": [],
+    }
+    before, _, stats = agent._runtime_tool_context(state)  # type: ignore[arg-type]
+    first_start = state["runtime_observation_start"]
+    assert first_start > 0
+    assert stats["prompt_observation_tokens"] <= 1500
+    assert stats["provider_cache_edits"] is False
+
+    state["observations"].append({"tool_name": "latest", "observation": {"answer_preview": "new evidence"}})
+    after, _, after_stats = agent._runtime_tool_context(state)  # type: ignore[arg-type]
+
+    assert state["runtime_observation_start"] == first_start
+    assert after[:-1] == before
+    assert after_stats["newly_omitted_observations"] == 0
+    assert len(state["observations"]) == 7
+    assert agent._graph_state_update(state, [])["runtime_observation_start"] == first_start  # type: ignore[arg-type]
+
+
+def test_runtime_projection_bounds_large_escaped_metadata(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.agents.chat_agent.default_context_budget",
+        lambda: SimpleNamespace(tool_observation_tokens=512),
+    )
+    agent = ChatAgent(model=None)
+    arguments = {"query": '\\"' * 5000}
+    state = {
+        "observations": [{"tool_name": "workspace.search_code", "arguments": arguments, "observation": {"answer_preview": "result"}}],
+        "agent_events": [],
+    }
+    items, _, stats = agent._runtime_tool_context(state)  # type: ignore[arg-type]
+
+    assert items
+    assert stats["prompt_observation_tokens"] <= 512
+    assert state["observations"][0]["arguments"] == arguments
+
+
+@pytest.mark.parametrize(
+    ("usage_metadata", "token_usage", "expected"),
+    [
+        ({}, {"prompt_tokens_details": {"cached_tokens": 120}}, 120),
+        ({}, {"prompt_cache_hit_tokens": 90}, 90),
+        ({}, {"cache_read_input_tokens": 60}, 60),
+        ({"input_token_details": {"cache_read": 0}}, {"prompt_cache_hit_tokens": 90}, 0),
+    ],
+)
+def test_model_usage_normalizes_provider_cache_read_tokens(usage_metadata, token_usage, expected) -> None:
+    response = SimpleNamespace(usage_metadata=usage_metadata, response_metadata={"token_usage": token_usage})
+    usage = ChatAgent(model=None)._normalize_model_usage(response)
+
+    assert usage["cache_read_input_tokens"] == expected
+
+
 @pytest.mark.asyncio
 async def test_recent_recall_uses_injected_history_without_memory_tool() -> None:
     model = RecentRecallModel()

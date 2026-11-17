@@ -43,7 +43,7 @@ def _cors_origin_regex() -> str | None:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title=settings.app_name, version="1.0.0")
+    app = FastAPI(title=settings.app_name, version="1.0.1")
 
     @app.exception_handler(MilvusUnavailableError)
     async def milvus_unavailable_handler(_request, exc: MilvusUnavailableError) -> JSONResponse:

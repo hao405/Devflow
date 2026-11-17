@@ -80,6 +80,7 @@ class ConversationState(TypedDict, total=False):
     model_usage: list[dict[str, Any]]
     prompt_diagnostics: list[dict[str, Any]]
     runtime_context_stats: dict[str, Any]
+    runtime_observation_start: int
     context_overflow_recovery_attempted: bool
 
 
@@ -177,6 +178,7 @@ class ChatAgent(BaseAgent):
             "model_usage": [],
             "prompt_diagnostics": [],
             "runtime_context_stats": {},
+            "runtime_observation_start": 0,
             "context_overflow_recovery_attempted": False,
         }
         if context.get("evaluation_mode"):
@@ -586,6 +588,7 @@ class ChatAgent(BaseAgent):
             "model_usage",
             "prompt_diagnostics",
             "runtime_context_stats",
+            "runtime_observation_start",
             "context_overflow_recovery_attempted",
         ]
         update = {key: state[key] for key in keys if key in state}
@@ -1016,9 +1019,9 @@ class ChatAgent(BaseAgent):
             f"服务端上下文：\n{server_context}\n\n"
             f"上下文覆盖度：\n{json.dumps(self._history_coverage(context), ensure_ascii=False)}\n\n"
             f"最近消息：\n{json.dumps(history, ensure_ascii=False)}\n\n"
+            f"用户消息：{state.get('message') or ''}\n\n"
             f"已有观察结果（已按总预算投影，完整结果保存在会话转录）：\n{json.dumps(prompt_observations, ensure_ascii=False)}\n\n"
-            f"工具调用/结果索引：\n{json.dumps(prompt_events, ensure_ascii=False)}\n\n"
-            f"用户消息：{state.get('message') or ''}"
+            f"工具调用/结果索引：\n{json.dumps(prompt_events, ensure_ascii=False)}"
         )
 
     def _normalize_action_input(self, action: str, action_input: dict[str, Any], state: ConversationState) -> dict[str, Any]:
@@ -1477,22 +1480,23 @@ class ChatAgent(BaseAgent):
         *,
         aggressive: bool = False,
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
-        """Project complete tool state into a bounded prompt-only view.
+        """Keep projections stable until a bounded local eviction is necessary.
 
-        The full observations and events remain in ``state`` and are sealed in
-        ChatSession.  Only this derived view is shortened for the next model
-        call, matching Claude Code's separation between durable transcript and
-        active context.
+        Ordinary appends keep prior projected items unchanged. Eviction clears
+        a batch to leave headroom and never resurrects omitted items within the
+        run. It changes the prompt prefix at the eviction point; it is not a
+        provider-side cache edit. Full observations remain available for audit.
         """
         raw_observations = [item for item in state.get("observations") or [] if isinstance(item, dict)]
         budget = default_context_budget().tool_observation_tokens
         if aggressive:
             budget = max(512, budget // 4)
-        per_item_budget = max(160, min(1400, budget // max(len(raw_observations), 1)))
-        remaining = budget
-        kept_reversed: list[dict[str, Any]] = []
-        omitted = 0
-        for item in reversed(raw_observations):
+        # A count-dependent budget rewrites every old result on each new call.
+        per_item_budget = max(160, min(1400, budget))
+        previous_start = min(max(0, int(state.get("runtime_observation_start") or 0)), len(raw_observations))
+        omitted = previous_start
+        projected: list[dict[str, Any]] = []
+        for item in raw_observations[previous_start:]:
             next_item = dict(item)
             observation = next_item.get("observation")
             if isinstance(observation, dict):
@@ -1511,34 +1515,39 @@ class ChatAgent(BaseAgent):
             else:
                 next_item["observation"] = clip_to_token_budget(str(observation or ""), per_item_budget)
 
-            serialized = json.dumps(next_item, ensure_ascii=False, default=str)
-            cost = estimate_tokens(serialized)
-            if cost > remaining and kept_reversed:
-                omitted += 1
-                continue
-            if cost > remaining:
-                next_item = {
-                    "tool_name": str(item.get("tool_name") or "tool"),
-                    "observation": clip_to_token_budget(serialized, max(120, remaining)),
-                    "compacted": True,
-                }
-                cost = estimate_tokens(json.dumps(next_item, ensure_ascii=False))
-            kept_reversed.append(next_item)
-            remaining = max(0, remaining - cost)
-            if remaining <= 0:
-                omitted += max(0, len(raw_observations) - len(kept_reversed))
-                break
+            projected.append(next_item)
 
-        prompt_observations = list(reversed(kept_reversed))
-        if omitted:
-            prompt_observations.insert(
-                0,
+        def prompt_items() -> list[dict[str, Any]]:
+            marker = [
                 {
                     "compacted": True,
                     "omitted_old_observations": omitted,
-                    "recovery": "完整工具结果保存在本轮 ChatSession transcript，可按 session 读取。",
-                },
-            )
+                    "recovery": "投影前的工具观察保留在本轮状态，结束后随会话封存；原始正文需重查对应工具。",
+                }
+            ] if omitted else []
+            return [*marker, *projected]
+
+        def projected_tokens() -> int:
+            return estimate_tokens(json.dumps(prompt_items(), ensure_ascii=False, default=str))
+
+        if projected_tokens() > budget:
+            # Pay for a local prefix change less often by freeing some headroom.
+            target_tokens = int(budget * 0.75)
+            while len(projected) > 1 and projected_tokens() > target_tokens:
+                projected.pop(0)
+                omitted += 1
+            if projected and projected_tokens() > budget:
+                serialized = json.dumps(projected[0], ensure_ascii=False, default=str)
+                projected[0] = {"tool_name": "tool", "observation": "", "compacted": True}
+                content_budget = max(0, budget - projected_tokens())
+                projected[0]["observation"] = clip_to_token_budget(serialized, content_budget)
+                # JSON escaping can cost more tokens than the original text.
+                while projected[0]["observation"] and projected_tokens() > budget:
+                    content_budget = max(0, content_budget - max(1, projected_tokens() - budget))
+                    projected[0]["observation"] = clip_to_token_budget(serialized, content_budget)
+
+        state["runtime_observation_start"] = omitted
+        prompt_observations = prompt_items()
 
         prompt_events: list[dict[str, Any]] = []
         for event in self._tool_event_transcript(state):
@@ -1578,6 +1587,9 @@ class ChatAgent(BaseAgent):
             "source_observations": len(raw_observations),
             "prompt_observations": len(prompt_observations),
             "omitted_observations": omitted,
+            "newly_omitted_observations": omitted - previous_start,
+            "cache_strategy": "stable_projection_with_batched_local_eviction",
+            "provider_cache_edits": False,
             "tool_event_index_entries": len(prompt_events),
         }
 
@@ -1667,11 +1679,22 @@ class ChatAgent(BaseAgent):
         token_usage = token_usage if isinstance(token_usage, dict) else {}
         input_details = raw.get("input_token_details") or {}
         input_details = input_details if isinstance(input_details, dict) else {}
+        token_details = token_usage.get("prompt_tokens_details") or token_usage.get("input_tokens_details") or {}
+        token_details = token_details if isinstance(token_details, dict) else {}
+        cache_read_tokens = next(
+            (value for value in (
+                input_details.get("cache_read"),
+                token_details.get("cached_tokens"),
+                token_usage.get("prompt_cache_hit_tokens"),
+                token_usage.get("cache_read_input_tokens"),
+            ) if value is not None),
+            0,
+        )
         return {
             "input_tokens": raw.get("input_tokens", token_usage.get("prompt_tokens")),
             "output_tokens": raw.get("output_tokens", token_usage.get("completion_tokens")),
             "total_tokens": raw.get("total_tokens", token_usage.get("total_tokens")),
-            "cache_read_input_tokens": input_details.get("cache_read", token_usage.get("cache_read_input_tokens", 0)),
+            "cache_read_input_tokens": cache_read_tokens,
             "cache_creation_input_tokens": input_details.get("cache_creation", token_usage.get("cache_creation_input_tokens", 0)),
             "model": response_metadata.get("model_name") or settings.llm_model,
         }
