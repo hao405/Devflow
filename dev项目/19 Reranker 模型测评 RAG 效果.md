@@ -46,8 +46,6 @@ Hugging Face 的 Sentence Transformers 教程明确将 Reranker Model 称为 Cro
 
 ### 2.2 评测结果
 
-<text></text>
-
 | 模型 | 参数量 | nDCG@10 | 相比 MiniLM 基线 |
 |---|---:|---:|---:|
 | MiniLM Cross-Encoder（基线） | 22.7M | 69.6 | — |
@@ -96,8 +94,6 @@ Hugging Face 的 Sentence Transformers 教程明确将 Reranker Model 称为 Cro
 | 固定召回策略 | HyPE |
 
 ### 3.2 RAG 生成质量：GPT-4o-mini LLM Reranker 对比 BGE / MiniLM
-
-<text></text>
 
 | 指标 | GPT-4o-mini LLM Reranker | BGE Cross-Encoder | 提升 | MiniLM Cross-Encoder | 提升 |
 |---|---:|---:|---:|---:|---:|
